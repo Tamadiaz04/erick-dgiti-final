@@ -1,0 +1,48 @@
+name: CI - DGITI Final
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Pruebas de la aplicacion
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Ejecutar pruebas unitarias
+        working-directory: app
+        run: python -m unittest -v
+
+  terraform:
+    name: Validacion de Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+      - name: Verificar formato
+        run: terraform -chdir=infra fmt -check
+      - name: Inicializar proveedores
+        run: terraform -chdir=infra init -backend=false
+      - name: Validar configuracion
+        run: terraform -chdir=infra validate
+      - name: Preparar artefacto de despliegue
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-dgiti-final
+          path: |
+            infra/*.tf
+            infra/*.sh
+            infra/*.example
+            app/*.py
+          if-no-files-found: error
